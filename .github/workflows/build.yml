@@ -12,10 +12,13 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path "iq_studio/main.py") { cd iq_studio }
-          Get-ChildItem -Recurse -Name | Select-Object -First 60
-          foreach ($d in "core","ui") {
-            if (-not (Test-Path "$d/__init__.py")) { New-Item -ItemType File -Path "$d/__init__.py" | Out-Null }
-          }
+          New-Item -ItemType Directory -Force -Path core,ui | Out-Null
+          $core = "models.py","imaging.py","layout.py","exporter.py","project_io.py","settings.py","autodetect.py"
+          $ui = "style.py","preview.py","editor_dialog.py","settings_dialog.py","doc_card.py","main_window.py"
+          foreach ($f in $core) { if (Test-Path $f) { Move-Item $f "core/$f" -Force } }
+          foreach ($f in $ui) { if (Test-Path $f) { Move-Item $f "ui/$f" -Force } }
+          New-Item -ItemType File -Force -Path core/__init__.py,ui/__init__.py | Out-Null
+          Get-ChildItem -Recurse core,ui | Select-Object -ExpandProperty FullName
           pip install -r requirements.txt
           pyinstaller --noconfirm --onefile --windowed --name IQ_Studio --paths . --collect-submodules core --collect-submodules ui main.py
           New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE/out" | Out-Null
