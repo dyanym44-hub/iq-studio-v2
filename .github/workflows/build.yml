@@ -3,17 +3,20 @@ on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: iq_studio
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - run: pyinstaller --noconfirm --onefile --windowed --name IQ_Studio main.py
+      - name: Build
+        shell: pwsh
+        run: |
+          if (Test-Path "iq_studio/main.py") { cd iq_studio }
+          pip install -r requirements.txt
+          pyinstaller --noconfirm --onefile --windowed --name IQ_Studio main.py
+          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE/out" | Out-Null
+          Copy-Item dist/IQ_Studio.exe "$env:GITHUB_WORKSPACE/out/IQ_Studio.exe"
       - uses: actions/upload-artifact@v4
         with:
           name: IQ_Studio_exe
-          path: iq_studio/dist/IQ_Studio.exe
+          path: out/IQ_Studio.exe
