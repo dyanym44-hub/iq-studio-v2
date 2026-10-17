@@ -12,8 +12,12 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path "iq_studio/main.py") { cd iq_studio }
+          Get-ChildItem -Recurse -Name | Select-Object -First 60
+          foreach ($d in "core","ui") {
+            if (-not (Test-Path "$d/__init__.py")) { New-Item -ItemType File -Path "$d/__init__.py" | Out-Null }
+          }
           pip install -r requirements.txt
-          pyinstaller --noconfirm --onefile --windowed --name IQ_Studio main.py
+          pyinstaller --noconfirm --onefile --windowed --name IQ_Studio --paths . --collect-submodules core --collect-submodules ui main.py
           New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE/out" | Out-Null
           Copy-Item dist/IQ_Studio.exe "$env:GITHUB_WORKSPACE/out/IQ_Studio.exe"
       - uses: actions/upload-artifact@v4
