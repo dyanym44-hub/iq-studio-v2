@@ -189,7 +189,7 @@ class ImageEditor(QDialog):
     def _smart(self):
         from core import autodetect
         try:
-            q = autodetect.detect_quad(self.path, self.edit.rot90) if abs(self.edit.angle) < 0.01 else None
+            q = autodetect.detect_quad(self.path, self.edit.rot90, self.ratio) if abs(self.edit.angle) < 0.01 else None
         except Exception as ex:
             QMessageBox.warning(self, "التعرف الذكي", f"تعذّر التشغيل:\n{ex}"); return
         if q is None:

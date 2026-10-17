@@ -68,7 +68,11 @@ def compute_layout(project):
         while True:
             spot = _find_spot(pages[pg], w, h, m, gap, pw, ph)
             if spot is None and not pages[pg]:
-                spot = (m, m)           # أكبر من الورقة: يوضع في الزاوية ويظهر للمستخدم
+                # أكبر من المساحة داخل الهوامش (مثل ورقة A4 كاملة): يوضع في وسط الصفحة إن كان يتسع للورقة
+                if w <= pw + EPS and h <= ph + EPS:
+                    spot = (max(0.0, (pw - w) / 2), max(0.0, (ph - h) / 2))
+                else:
+                    spot = (m, m)
             if spot:
                 pages[pg].append((spot[0], spot[1], w, h))
                 out.append(Placement(doc_id, name, pg, spot[0], spot[1], w, h))

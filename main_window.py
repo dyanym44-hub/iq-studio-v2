@@ -17,7 +17,7 @@ try:
 except Exception:
     autodetect = None
 
-KINDS = ["البطاقة الوطنية", "هوية الأحوال المدنية", "شهادة الجنسية", "بطاقة السكن",
+KINDS = ["ورقة A4 (مستند كامل)", "البطاقة الوطنية", "هوية الأحوال المدنية", "شهادة الجنسية", "بطاقة السكن",
          "بطاقة الناخب", "بطاقة موظف", "بطاقة طالب", "مستمسك آخر"]
 IMG_FILTER = "صور (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)"
 AUTOSAVE = cfg.DIR / "autosave.iqproj"
@@ -219,19 +219,24 @@ class MainWindow(QMainWindow):
     # ---------- المستندات ----------
     @safe
     def add_doc(self, files=None):
-        doc = Doc(kind=self.kind.currentText(), w_cm=self.s["card_w_cm"], h_cm=self.s["card_h_cm"])
-        self.project.docs.append(doc)
+        self.project.docs.append(self._new_doc())
         self.after_structure_change()
 
     def after_structure_change(self):
         self.commit(); self.rebuild_cards(); self.refresh_preview()
 
-    def _auto_detect(self, side):
+    def _new_doc(self):
+        kind = self.kind.currentText()
+        if "A4" in kind:
+            return Doc(kind=kind, w_cm=21.0, h_cm=29.7)
+        return Doc(kind=kind, w_cm=self.s["card_w_cm"], h_cm=self.s["card_h_cm"])
+
+    def _auto_detect(self, side, doc):
         """يحدد حواف الهوية تلقائيًا إن كان الخيار مفعّلًا؛ يفشل بصمت ويترك الصورة كما هي."""
         if not (self.s.get("auto_detect", True) and autodetect and side.path):
             return False
         try:
-            q = autodetect.detect_quad(side.path, side.edit.rot90)
+            q = autodetect.detect_quad(side.path, side.edit.rot90, doc.w_cm / doc.h_cm)
         except Exception:
             return False
         if q:
@@ -247,7 +252,7 @@ class MainWindow(QMainWindow):
                     sd = d.side(n)
                     if sd.path and os.path.isfile(sd.path):
                         total += 1; sd.edit.quad = None
-                        ok += self._auto_detect(sd)
+                        ok += self._auto_detect(sd, d)
         finally:
             QApplication.restoreOverrideCursor()
         self.commit(); self.refresh_preview()
@@ -262,8 +267,8 @@ class MainWindow(QMainWindow):
                 imaging.check_image(f)
             except Exception:
                 bad.append(os.path.basename(f)); continue
-            d = Doc(kind=self.kind.currentText(), w_cm=self.s["card_w_cm"], h_cm=self.s["card_h_cm"])
-            d.front.path = f; self._auto_detect(d.front); self.project.docs.append(d)
+            d = self._new_doc()
+            d.front.path = f; self._auto_detect(d.front, d); self.project.docs.append(d)
         if files: self.after_structure_change()
         if bad: QMessageBox.warning(self, "ملفات غير صالحة", "تعذّر فتح:\n" + "\n".join(bad))
 
@@ -276,7 +281,7 @@ class MainWindow(QMainWindow):
         except Exception:
             QMessageBox.warning(self, "ملف غير صالح", "الملف المختار ليس صورة صالحة أو لا يمكن فتحه."); return
         s = doc.side(side); s.path, s.edit = f, Edit()
-        self._auto_detect(s)
+        self._auto_detect(s, doc)
         self.after_structure_change()
 
     @safe
