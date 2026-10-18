@@ -19,6 +19,8 @@ except Exception:
 
 KINDS = ["ورقة A4 (مستند كامل)", "البطاقة الوطنية", "هوية الأحوال المدنية", "شهادة الجنسية", "بطاقة السكن",
          "بطاقة الناخب", "بطاقة موظف", "بطاقة طالب", "مستمسك آخر"]
+# أبعاد افتراضية خاصة ببعض أنواع المستمسكات (عرض، ارتفاع) بالسنتيمتر
+KIND_SIZES = {"بطاقة السكن": (9.5, 6.5)}
 IMG_FILTER = "صور (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)"
 AUTOSAVE = cfg.DIR / "autosave.iqproj"
 
@@ -229,7 +231,8 @@ class MainWindow(QMainWindow):
         kind = self.kind.currentText()
         if "A4" in kind:
             return Doc(kind=kind, w_cm=21.0, h_cm=29.7)
-        return Doc(kind=kind, w_cm=self.s["card_w_cm"], h_cm=self.s["card_h_cm"])
+        w, h = KIND_SIZES.get(kind, (self.s["card_w_cm"], self.s["card_h_cm"]))
+        return Doc(kind=kind, w_cm=w, h_cm=h)
 
     def _auto_detect(self, side, doc):
         """يحدد حواف الهوية تلقائيًا إن كان الخيار مفعّلًا؛ يفشل بصمت ويترك الصورة كما هي."""
