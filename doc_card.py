@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import (QFrame, QGridLayout, QLabel, QPushButton, QDoubleSpinBox, QHBoxLayout)
+from PySide6.QtWidgets import (QFrame, QGridLayout, QLabel, QPushButton, QDoubleSpinBox, QHBoxLayout, QSpinBox)
+from core.models import PHOTO_KINDS
 
 
 class DocCard(QFrame):
@@ -12,18 +13,29 @@ class DocCard(QFrame):
         self.sw = self._spin(doc.w_cm, "w_cm"); self.sh = self._spin(doc.h_cm, "h_cm")
         g.addWidget(QLabel("العرض (cm)"), 1, 0); g.addWidget(self.sw, 1, 1)
         g.addWidget(QLabel("الارتفاع (cm)"), 2, 0); g.addWidget(self.sh, 2, 1)
-        g.addWidget(self._img_btn("front"), 1, 2); g.addWidget(self._img_btn("back"), 2, 2)
+        photo = doc.kind in PHOTO_KINDS                      # صورة شخصية: وجه واحد فقط
+        g.addWidget(self._img_btn("front", photo), 1, 2)
+        if not photo:
+            g.addWidget(self._img_btn("back"), 2, 2)
+        else:
+            cp = QSpinBox(); cp.setRange(1, 100); cp.setValue(doc.copies)
+            cp.valueChanged.connect(lambda v: (setattr(doc, "copies", v), win.refresh_preview()))
+            cp.editingFinished.connect(win.commit)
+            g.addWidget(QLabel("عدد النسخ"), 3, 0); g.addWidget(cp, 3, 1)
+        r = 4 if photo else 3
         row = QHBoxLayout()
-        for name, label in (("front", "تحرير الوجه"), ("back", "تحرير الظهر")):
+        for name, label in (("front", "تحرير الصورة" if photo else "تحرير الوجه"), ("back", "تحرير الظهر")):
+            if photo and name == "back":
+                continue
             b = QPushButton(label); b.setEnabled(bool(doc.side(name).path))
             b.clicked.connect(lambda _=False, n=name: win.edit_side(doc, n)); row.addWidget(b)
-        g.addLayout(row, 3, 0, 1, 3)
+        g.addLayout(row, r, 0, 1, 3)
         row2 = QHBoxLayout()
         up, dn = QPushButton("▲"), QPushButton("▼")
         up.clicked.connect(lambda: win.move_doc(doc, -1)); dn.clicked.connect(lambda: win.move_doc(doc, 1))
         d = QPushButton("حذف البطاقة"); d.setObjectName("danger"); d.clicked.connect(lambda: win.delete_doc(doc))
         row2.addWidget(up); row2.addWidget(dn); row2.addWidget(d, 1)
-        g.addLayout(row2, 4, 0, 1, 3)
+        g.addLayout(row2, r + 1, 0, 1, 3)
 
     def _spin(self, val, attr):
         s = QDoubleSpinBox(); s.setRange(0.5, 40); s.setDecimals(1); s.setSingleStep(0.1); s.setValue(val)
@@ -31,9 +43,9 @@ class DocCard(QFrame):
         s.editingFinished.connect(self.win.commit)
         return s
 
-    def _img_btn(self, name):
+    def _img_btn(self, name, photo=False):
         has = bool(self.doc.side(name).path)
-        word = "الوجه" if name == "front" else "الظهر"
+        word = "الصورة" if photo else ("الوجه" if name == "front" else "الظهر")
         b = QPushButton(("✓ تغيير " if has else "رفع ") + word)
         b.clicked.connect(lambda: self.win.set_side_image(self.doc, name))
         return b

@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, Q
                                QComboBox, QSlider, QFileDialog, QMessageBox, QApplication, QFrame)
 from PySide6.QtPrintSupport import QPrinter, QPrintPreviewDialog
 from core import settings as cfg, layout, exporter, imaging, project_io
-from core.models import Project, Doc, Edit, SIDE_NAMES
+from core.models import Project, Doc, Edit, SIDE_NAMES, KIND_SIZES, PHOTO_KINDS
 from ui.preview import PreviewView
 from ui.doc_card import DocCard
 from ui.editor_dialog import ImageEditor
@@ -17,10 +17,8 @@ try:
 except Exception:
     autodetect = None
 
-KINDS = ["ورقة A4 (مستند كامل)", "البطاقة الوطنية", "هوية الأحوال المدنية", "شهادة الجنسية", "بطاقة السكن",
+KINDS = ["ورقة A4 (مستند كامل)", "صور جواز / وزارية", "صور معاملات", "البطاقة الوطنية", "هوية الأحوال المدنية", "شهادة الجنسية", "بطاقة السكن",
          "بطاقة الناخب", "بطاقة موظف", "بطاقة طالب", "مستمسك آخر"]
-# أبعاد افتراضية خاصة ببعض أنواع المستمسكات (عرض، ارتفاع) بالسنتيمتر
-KIND_SIZES = {"بطاقة السكن": (9.5, 6.5)}
 IMG_FILTER = "صور (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)"
 AUTOSAVE = cfg.DIR / "autosave.iqproj"
 
@@ -229,13 +227,13 @@ class MainWindow(QMainWindow):
 
     def _new_doc(self):
         kind = self.kind.currentText()
-        if "A4" in kind:
-            return Doc(kind=kind, w_cm=21.0, h_cm=29.7)
         w, h = KIND_SIZES.get(kind, (self.s["card_w_cm"], self.s["card_h_cm"]))
         return Doc(kind=kind, w_cm=w, h_cm=h)
 
     def _auto_detect(self, side, doc):
         """يحدد حواف الهوية تلقائيًا إن كان الخيار مفعّلًا؛ يفشل بصمت ويترك الصورة كما هي."""
+        if doc.kind in PHOTO_KINDS:      # الصور الشخصية لا تحتاج تعرّفًا على حواف
+            return True
         if not (self.s.get("auto_detect", True) and autodetect and side.path):
             return False
         try:
@@ -284,8 +282,11 @@ class MainWindow(QMainWindow):
         except Exception:
             QMessageBox.warning(self, "ملف غير صالح", "الملف المختار ليس صورة صالحة أو لا يمكن فتحه."); return
         s = doc.side(side); s.path, s.edit = f, Edit()
-        self._auto_detect(s, doc)
+        found = self._auto_detect(s, doc)
         self.after_structure_change()
+        # كما في البرنامج الأصلي: تفتح نافذة التحرير فورًا للتأكد من القص (وإلزاميًا إذا لم يتعرف تلقائيًا)
+        if self.s.get("auto_open_editor", True) or (autodetect and not found and self.s.get("auto_detect", True)):
+            self.edit_side(doc, side)
 
     @safe
     def edit_side(self, doc, side):
@@ -317,7 +318,7 @@ class MainWindow(QMainWindow):
         if doc_id is None:
             self.statusBar().showMessage("لا يمكن وضع البطاقة هنا (تداخل أو خارج الورقة)"); return
         pl, _ = layout.compute_layout(self.project)
-        for p in pl:    # تثبيت الوضع الحالي كي لا تتحرك بقية البطاقات
+        for p in (q for q in pl if q.copy == 0):    # تثبيت الوضع الحالي كي لا تتحرك بقية البطاقات
             self.project.find(p.doc_id).side(p.side).pos = [p.page, p.x, p.y]
         self.project.find(doc_id).side(side).pos = [page, x, y]
         self.commit(); self.refresh_preview()

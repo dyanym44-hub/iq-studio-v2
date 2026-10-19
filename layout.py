@@ -18,6 +18,7 @@ class Placement:
     y: float
     w: float
     h: float
+    copy: int = 0
 
 
 def is_free(rects, x, y, w, h, gap=0.0):
@@ -55,15 +56,19 @@ def compute_layout(project):
             if not side.path:
                 continue
             w, h = doc.w_cm * 10, doc.h_cm * 10
+            placed = False
             if side.pos:
                 pg, x, y = int(side.pos[0]), float(side.pos[1]), float(side.pos[2])
                 if x >= -EPS and y >= -EPS and x + w <= pw + EPS and y + h <= ph + EPS \
                         and is_free(pages[pg], x, y, w, h):
                     pages[pg].append((x, y, w, h))
                     out.append(Placement(doc.id, name, pg, x, y, w, h))
-                    continue
-            flow.append((doc.id, name, w, h))
-    for doc_id, name, w, h in flow:
+                    placed = True
+            if not placed:
+                flow.append((doc.id, name, w, h, 0))
+            for c in range(1, max(1, doc.copies)):          # النسخ الإضافية تُرتَّب تلقائيًا بجانب الأصل
+                flow.append((doc.id, name, w, h, c))
+    for doc_id, name, w, h, cp in flow:
         pg = 0
         while True:
             spot = _find_spot(pages[pg], w, h, m, gap, pw, ph)
@@ -75,7 +80,7 @@ def compute_layout(project):
                     spot = (m, m)
             if spot:
                 pages[pg].append((spot[0], spot[1], w, h))
-                out.append(Placement(doc_id, name, pg, spot[0], spot[1], w, h))
+                out.append(Placement(doc_id, name, pg, spot[0], spot[1], w, h, cp))
                 break
             pg += 1
     n = max([p.page for p in out], default=0) + 1

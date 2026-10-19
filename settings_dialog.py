@@ -30,6 +30,7 @@ class SettingsDialog(QDialog):
         r = QHBoxLayout(); r.addWidget(self.folder); r.addWidget(b2); f.addRow("مجلد الحفظ الافتراضي", r)
         self.auto = QCheckBox("حفظ تلقائي كل دقيقة"); self.auto.setChecked(s["autosave"]); f.addRow("", self.auto)
         self.det = QCheckBox("تعرّف ذكي تلقائي على حواف الهوية عند إضافة الصورة"); self.det.setChecked(s.get("auto_detect", True)); f.addRow("", self.det)
+        self.opened = QCheckBox("فتح نافذة التحرير تلقائيًا بعد رفع صورة (للتأكيد على القص)"); self.opened.setChecked(s.get("auto_open_editor", True)); f.addRow("", self.opened)
         f.addRow("لغة الواجهة", QLabel("العربية (دعم لغات أخرى مستقبلًا)"))
         v = QVBoxLayout(self); v.addLayout(f)
         ok = QPushButton("حفظ"); ok.setObjectName("primary"); ok.clicked.connect(self.accept)
@@ -52,6 +53,6 @@ class SettingsDialog(QDialog):
         s.update(app_title=self.title.text().strip() or s["app_title"], library_name=self.lib.text().strip(),
                  logo=self.logo.text().strip(), card_w_cm=self.cw.value(), card_h_cm=self.ch.value(),
                  margin_mm=self.mg.value(), gap_mm=self.gp.value(), export_dpi=int(self.dpi.currentText()),
-                 export_folder=self.folder.text().strip(), autosave=self.auto.isChecked(), auto_detect=self.det.isChecked(),
+                 export_folder=self.folder.text().strip(), autosave=self.auto.isChecked(), auto_detect=self.det.isChecked(), auto_open_editor=self.opened.isChecked(),
                  socials=[{"label": l.text().strip(), "url": u.text().strip()} for l, u in self.soc])
         return s

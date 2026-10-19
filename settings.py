@@ -14,6 +14,7 @@ DEFAULTS = {
     "export_dpi": 300, "export_folder": "", "export_format": "JPG",
     "autosave": False,
     "auto_detect": True,
+    "auto_open_editor": True,
 }
 
 

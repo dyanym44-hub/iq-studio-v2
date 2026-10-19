@@ -40,8 +40,9 @@ class CardItem(QGraphicsPixmapItem):
         self.p, self.view = p, view
         self.setScale(25.4 / PREVIEW_DPI)
         self.setPos(p.x, p.y)
-        self.setFlag(QGraphicsPixmapItem.ItemIsMovable, True)
-        self.setCursor(Qt.OpenHandCursor)
+        if p.copy == 0:
+            self.setFlag(QGraphicsPixmapItem.ItemIsMovable, True)
+            self.setCursor(Qt.OpenHandCursor)
         self.setTransformationMode(Qt.SmoothTransformation)
 
     def mouseReleaseEvent(self, e):
@@ -105,7 +106,7 @@ class PreviewView(QGraphicsView):
             return
         pw, ph = layout.page_dims(self.project.orientation)
         others = [(q.x, q.y, q.w, q.h) for q in self.placements
-                  if q.page == p.page and not (q.doc_id == p.doc_id and q.side == p.side)]
+                  if q.page == p.page and not (q.doc_id == p.doc_id and q.side == p.side and q.copy == p.copy)]
         ok = x >= 0 and y >= 0 and x + p.w <= pw and y + p.h <= ph and layout.is_free(others, x, y, p.w, p.h)
         if ok:
             self.on_move(p.doc_id, p.side, p.page, x, y)

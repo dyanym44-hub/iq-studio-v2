@@ -6,6 +6,11 @@ from dataclasses import dataclass, field, asdict
 from typing import Optional
 
 SIDES = ("front", "back")
+
+# أبعاد افتراضية خاصة (عرض، ارتفاع) بالسنتيمتر
+KIND_SIZES = {"بطاقة السكن": (9.5, 6.5), "ورقة A4 (مستند كامل)": (21.0, 29.7),
+              "صور جواز / وزارية": (3.5, 4.5), "صور معاملات": (3.0, 4.0)}
+PHOTO_KINDS = ("صور جواز / وزارية", "صور معاملات")      # صور شخصية: وجه واحد وبلا تعرّف على حواف
 SIDE_NAMES = {"front": "الوجه", "back": "الظهر"}
 
 
@@ -58,6 +63,7 @@ class Doc:
     h_cm: float = 5.6
     front: Side = field(default_factory=Side)
     back: Side = field(default_factory=Side)
+    copies: int = 1
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:10])
 
     def side(self, name: str) -> Side:
@@ -65,13 +71,13 @@ class Doc:
 
     def to_dict(self):
         return {"id": self.id, "kind": self.kind, "w_cm": self.w_cm, "h_cm": self.h_cm,
-                "front": self.front.to_dict(), "back": self.back.to_dict()}
+                "front": self.front.to_dict(), "back": self.back.to_dict(), "copies": self.copies}
 
     @classmethod
     def from_dict(cls, d):
         return cls(d.get("kind", "مستمسك"), float(d.get("w_cm", 8.6)), float(d.get("h_cm", 5.6)),
                    Side.from_dict(d.get("front", {})), Side.from_dict(d.get("back", {})),
-                   d.get("id") or uuid.uuid4().hex[:10])
+                   max(1, int(d.get("copies", 1))), d.get("id") or uuid.uuid4().hex[:10])
 
 
 @dataclass
